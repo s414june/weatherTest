@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <div class="flex">
+        <div class="weather">
+            <h1>台灣各地區明日天氣預報</h1>
+            <p>請選擇想查詢天氣的縣市</p>
+            <select name="taiwanArea" id="weather-area">
+            </select>
+            <div id="weather-result">
+                <p>預報時刻：</p>
+                <p>氣候：</p>
+                <p>濕度：</p>
+                <p>體感：</p>
+                <p>溫度：</p>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    let weatherUrl = 'https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-AEE024E9-A102-4069-8272-A96024102012'
+    let weatherAreaSelector = document.querySelector('#weather-area')
+    let weatherResult = document.querySelector('#weather-result')
+
+    async function getUrl(url = '') {
+        const response = await fetch(url, {
+            method: 'GET'
+        })
+        return response.json()
+    }
+    getUrl(weatherUrl)
+        .then(function (data) {
+            let allLocations = data.records.location
+            allLocations.forEach(item => {
+                let optionHtml = document.createElement('option')
+                optionHtml.value = item.locationName
+                optionHtml.innerHTML = item.locationName
+                weatherAreaSelector.appendChild(optionHtml)
+            });
+            let weatherTime = allLocations[0].weatherElement[0].time[2]
+            let startTime = weatherTime.startTime
+            let endTime = weatherTime.endTime
+            weatherResult.children[0].innerHTML = `
+                預報時刻：<br>${startTime} ~ ${endTime}
+                `
+            return weatherAreaSelector
+        })
+        .then(function (data) {
+            data.addEventListener('change', changeAreaFn)
+        })
+        .catch(error => console.log('error'))
+
+    function changeAreaFn(e) {
+        getUrl(weatherUrl)
+            .then(function (data) {
+                let allLocations = data.records.location
+                allLocations.forEach(item => {
+                    if (item.locationName == e.target.value) {
+                        initWeather(item.weatherElement)
+                    }
+                })
+
+            })
+    }
+
+    function initWeather(weatherElement) {
+        weatherResult.children[4].innerHTML = `溫度：<span></span> ~ <span></span>度C之間`
+        weatherElement.forEach((item, index) => {
+            let weatherParameter = item.time[2].parameter.parameterName
+            if (index == 0) weatherResult.children[1].innerHTML = `
+                    氣候：${weatherParameter}
+                `
+            if (index == 1) weatherResult.children[2].innerHTML = `
+                    降雨機率：${weatherParameter}%
+                `
+            if (index == 3) weatherResult.children[3].innerHTML = `
+                    體感：${weatherParameter}
+                `
+            if (index == 2) weatherResult.children[4].children[0].innerHTML = weatherParameter
+            if (index == 4) weatherResult.children[4].children[1].innerHTML = weatherParameter
+        })
+    }
+</script>
+<style>
+    .flex {
+        display: flex;
+        justify-content: center;
+    }
+
+    .weather {
+        position: absolute;
+        top: 40%;
+        transform: translateY(-50%);
+    }
+</style>
+
+</html>
